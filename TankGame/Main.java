@@ -481,11 +481,14 @@ public class Main extends Application {
                 enemyBullets = aliveEnemyBullets;
 
                 // Explosion settings .
-                for (int e = 0; e < explosions.size(); e++) {
+                for (int e = explosions.size() - 1; e >= 0; e--) {
                     double[] pos = explosions.get(e);
                     long expTime = explosionTimes.get(e);
                     if (System.nanoTime() - expTime < 600_000_000L) {
                         gc.drawImage(smallExplosionImage, pos[0], pos[1]);
+                    } else {
+                        explosions.remove(e);
+                        explosionTimes.remove(e);
                     }
                 }
 

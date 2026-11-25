@@ -22,11 +22,11 @@
 
 ## Running the Project
 
-Requires **JDK 17+** and the **JavaFX SDK**.
+Requires **JDK 17+** and the **JavaFX SDK** (sprite assets are included under `TankGame/assets/`).
 
-Place the sprite files (`yellowTank1.png`, `yellowTank2.png`, `whiteTank1.png`, `whiteTank2.png`, `wall.png`, `bullet.png`, `smallExplosion.png`, `explosion.png`) under `/assets` on the classpath, then compile and run `TankGame/Main.java`:
+Compile and run `TankGame/Main.java` from the repository root:
 
 ```bash
 javac --module-path /path/to/javafx-sdk/lib --add-modules javafx.controls TankGame/Main.java
-java --module-path /path/to/javafx-sdk/lib --add-modules javafx.controls -cp TankGame:. Main
+java --module-path /path/to/javafx-sdk/lib --add-modules javafx.controls -cp TankGame Main
 ```
