@@ -5,6 +5,8 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.Pane;
+import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import javafx.animation.AnimationTimer;
 import java.util.HashSet;
@@ -20,6 +22,7 @@ public class Main extends Application {
     private List<Long> enemyTimers = new ArrayList<>();
     private int playerLives = 3;
     private int playerScore = 0;
+    private int highScore = 0;
     private double playerX = 350;
     private double playerY = 450;
     private int spriteIndex = 0;
@@ -87,12 +90,16 @@ public class Main extends Application {
             } else if (dir == 3) {
                 y = y - bulletSpeed;
             }
+            if (x < 0 || x > 800 || y < 0 || y > 600) {
+                active = false;
+                return;
+            }
             for (int w = 0; w < wallsList.size(); w++) {
                 double[] wall = wallsList.get(w);
                 double wx = wall[0];
                 double wy = wall[1];
                 if (x < wx + TILE && x + 8 > wx && y < wy + TILE && y + 8 > wy) {
-                    explosions.add(new double[]{x - 16, y - 16});
+                    explosions.add(new double[]{x - 11, y - 11, 0});
                     explosionTimes.add(System.nanoTime());
                     active = false;
                     break;
@@ -239,13 +246,16 @@ public class Main extends Application {
             enemyFireIntervals.add(interval);
         }
 
-        Scene scene = new Scene(root, 800, 600);
+        Scene scene = new Scene(root, 800, 600, Color.BLACK);
+        gc.setFont(Font.font("Monospaced", 16));
         scene.setOnKeyPressed(event -> {
             if (event.getCode() == KeyCode.P) {
                 paused = !paused;
+                pressedKeys.clear();
             } else if (event.getCode() == KeyCode.ESCAPE) {
                 System.exit(0);
             } else if (event.getCode() == KeyCode.R) {
+                pressedKeys.clear();
                 resetGame();
             } else {
                 pressedKeys.add(event.getCode());
@@ -259,20 +269,22 @@ public class Main extends Application {
                 if (playerLives <= 0 && !gameOver) {
                     gameOver = true;
                     gameOverTime = now;
-                    playerScore = 0;
                 }
                 if (gameOver) {
-                    gc.clearRect(0, 0, 800, 600);
-                    gc.fillText("GAME OVER", 340, 300);
-                    gc.fillText("Restarting...", 350, 340);
+                    gc.setFill(Color.BLACK);
+                    gc.fillRect(0, 0, 800, 600);
+                    gc.setFill(Color.WHITE);
+                    gc.fillText("GAME OVER", 350, 280);
+                    gc.fillText("Final Score: " + playerScore, 330, 310);
+                    gc.fillText("Restarting...", 345, 340);
                     if (now - gameOverTime > 2_000_000_000L) {
                         resetGame();
                     }
                     return;
                 }
                 if (paused) {
-                    gc.clearRect(0, 0, 800, 600);
-                    gc.fillText("PAUSED", 370, 300);
+                    gc.setFill(Color.WHITE);
+                    gc.fillText("PAUSED (Press P to resume)", 275, 300);
                     return;
                 }
                 boolean moved = false;
@@ -325,9 +337,12 @@ public class Main extends Application {
                     }
                     lastMove = now;
                 }
-                gc.clearRect(0, 0, 800, 600);
-                gc.fillText("Lives: " + playerLives, 20, 55);
-                gc.fillText("Score: " + playerScore, 20, 30);
+                gc.setFill(Color.BLACK);
+                gc.fillRect(0, 0, 800, 600);
+                gc.setFill(Color.WHITE);
+                gc.fillText("Score: " + playerScore, 24, 34);
+                gc.fillText("High Score: " + highScore, 24, 56);
+                gc.fillText("Lives: " + playerLives, 24, 78);
                 for (int w = 0; w < wallsList.size(); w++) {
                     double[] wall = wallsList.get(w);
                     gc.drawImage(wallImage, wall[0], wall[1]);
@@ -372,6 +387,20 @@ public class Main extends Application {
                     if (!blocked) {
                         enemy[0] = futureX;
                         enemy[1] = futureY;
+                    } else {
+                        int newDir = (int)(Math.random() * 4);
+                        enemyDirs.set(i, newDir);
+                        enemyTimers.set(i, System.nanoTime());
+                    }
+                    double pwCheck = playerTankImages[0].getWidth();
+                    double phCheck = playerTankImages[0].getHeight();
+                    if (enemy[0] < playerX + pwCheck && enemy[0] + enemyWidth > playerX &&
+                            enemy[1] < playerY + phCheck && enemy[1] + enemyHeight > playerY) {
+                        explosions.add(new double[]{playerX + pwCheck / 2 - 34, playerY + phCheck / 2 - 30, 1});
+                        explosionTimes.add(System.nanoTime());
+                        playerLives--;
+                        playerX = 352;
+                        playerY = 536;
                     }
                     double ex = enemy[0] + enemyTankImages[enemySprite].getWidth() / 2;
                     double ey = enemy[1] + enemyTankImages[enemySprite].getHeight() / 2;
@@ -420,10 +449,13 @@ public class Main extends Application {
                         double eh = enemyTankImages[0].getHeight();
                         if (bullet.x < ex + ew && bullet.x + 8 > ex &&
                                 bullet.y < ey + eh && bullet.y + 8 > ey) {
-                            explosions.add(new double[]{ex + ew / 2 - 16, ey + eh / 2 - 16});
+                            explosions.add(new double[]{ex + ew / 2 - 34, ey + eh / 2 - 30, 1});
                             explosionTimes.add(System.nanoTime());
                             bullet.active = false;
                             playerScore += 10;
+                            if (playerScore > highScore) {
+                                highScore = playerScore;
+                            }
                             enemyTanks.remove(k);
                             enemyDirs.remove(k);
                             enemyTimers.remove(k);
@@ -466,7 +498,7 @@ public class Main extends Application {
                     double ph = playerTankImages[0].getHeight();
                     if (bullet.x < px + pw && bullet.x + 8 > px &&
                             bullet.y < py + ph && bullet.y + 8 > py) {
-                        explosions.add(new double[]{px + pw / 2 - 16, py + ph / 2 - 16});
+                        explosions.add(new double[]{px + pw / 2 - 34, py + ph / 2 - 30, 1});
                         explosionTimes.add(System.nanoTime());
                         bullet.active = false;
                         playerLives--;
@@ -485,7 +517,8 @@ public class Main extends Application {
                     double[] pos = explosions.get(e);
                     long expTime = explosionTimes.get(e);
                     if (System.nanoTime() - expTime < 600_000_000L) {
-                        gc.drawImage(smallExplosionImage, pos[0], pos[1]);
+                        Image expImg = (pos.length > 2 && pos[2] == 1) ? explosionImage : smallExplosionImage;
+                        gc.drawImage(expImg, pos[0], pos[1]);
                     } else {
                         explosions.remove(e);
                         explosionTimes.remove(e);
